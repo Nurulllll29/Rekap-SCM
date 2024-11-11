@@ -10,6 +10,7 @@ import requests
 import os
 import zipfile
 from xlsxwriter import Workbook
+import tempfile
 
 def to_excel(df):
     output = BytesIO()
@@ -39,22 +40,24 @@ uploaded_file = st.file_uploader("Pilih file ZIP", type="zip")
 
 if uploaded_file is not None:
   if st.button('Process'):
-    with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-      zip_ref.extractall()
-      
-    dfs=[]
-    for file in os.listdir():
-        if file.endswith('.xlsx'):
-                df = pd.read_excel(file, sheet_name='REKAP MENTAH')
-                df = df.loc[:,[x for x in df.columns if 'Unnamed' not in x][:-1]].fillna('')
-                df['NAMA RESTO'] = file.split(' - ')[0]
-                dfs.append(df)
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        # Ekstrak file ZIP ke direktori sementara
+        with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+            zip_ref.extractall(tmpdirname)
           
-    dfs = pd.concat(dfs, ignore_index=True)
-    excel_data = to_excel(dfs)
-    st.download_button(
-        label="Download Excel",
-        data=excel_data,
-        file_name=f'LAPORAN SO HARIAN RESTO_{get_current_time_gmt7()}.xlsx',
-        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )   
+        dfs=[]
+        for file in os.listdir(tmpdirname):
+            if file.endswith('.xlsx'):
+                    df = pd.read_excel(tmpdirname+'/'+file, sheet_name='REKAP MENTAH')
+                    df = df.loc[:,[x for x in df.columns if 'Unnamed' not in str(x)][:-1]].fillna('')
+                    df['NAMA RESTO'] = file.split('-')[0]
+                    dfs.append(df)
+              
+        dfs = pd.concat(dfs, ignore_index=True)
+        excel_data = to_excel(dfs)
+        st.download_button(
+            label="Download Excel",
+            data=excel_data,
+            file_name=f'LAPORAN SO HARIAN RESTO_{get_current_time_gmt7()}.xlsx',
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )   

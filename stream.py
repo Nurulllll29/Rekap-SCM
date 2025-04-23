@@ -124,7 +124,7 @@ if uploaded_file is not None:
                    st.download_button(
                        label="Download Gabungan Excel",
                        data=to_excel(df_combined),
-                       file_name=f'gabungan_{get_current_time_gmt7()}.xlsx',
+                       file_name=f'Rekap SO_{get_current_time_gmt7()}.xlsx',
                        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                    )
                else:

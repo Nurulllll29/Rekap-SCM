@@ -37,11 +37,13 @@ def get_current_time_gmt7():
     
 st.title('SCM-Cleaning')
 
-selected_option = st.selectbox("Pilih salah satu:", ['LAPORAN SO HARIAN','PROMIX'])
+selected_option = st.selectbox("Pilih salah satu:", ['LAPORAN SO HARIAN','PROMIX','REKAP SO'])
 if selected_option == 'LAPORAN SO HARIAN':
-    st.write('Upload file format *Zip')
+    st.write('Upload file format *zip')
 if selected_option == 'PROMIX':
     st.write('Upload file format *xlsx')
+if selected_option == 'REKAP SO':
+    st.write('Upload file format *zip')
     
 uploaded_file = st.file_uploader("Pilih file", type=["zip",'xlsx'])
 if uploaded_file is not None:
@@ -89,6 +91,39 @@ if uploaded_file is not None:
                         data=to_excel(df_promix),
                         file_name=f'promix_{get_current_time_gmt7()}.xlsx',
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                    )   
+                    )
+         
+        if selected_option == 'REKAP SO':
+            with tempfile.TemporaryDirectory() as tmpdirname:
+               # Ekstrak file ZIP ke folder sementara
+               with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                   zip_ref.extractall(tmpdirname)
+               
+               all_dfs = []
+               for filename in os.listdir(tmpdirname):
+                   if filename.endswith('.xlsx'):
+                       file_path = os.path.join(tmpdirname, filename)
+       
+                       # Ambil nama file dan ekstrak kode cabang
+                       match = re.search(r'_(\d{4}\.[A-Z]+)', filename)
+                       cabang = match.group(1) if match else ''
+       
+                       # Baca Excel: header ke-5 (index ke-4)
+                       df = pd.read_excel(file_path, header=4).fillna('')
+                       df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
+                       df['Cabang'] = cabang
+       
+                       all_dfs.append(df)
     
-
+               if all_dfs:
+                   df_combined = pd.concat(all_dfs, ignore_index=True)
+       
+                   # Tombol download hasil
+                   st.download_button(
+                       label="Download Gabungan Excel",
+                       data=to_excel(df_combined),
+                       file_name=f'gabungan_{get_current_time_gmt7()}.xlsx',
+                       mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                   )
+               else:
+                   st.warning("Tidak ada file .xlsx ditemukan dalam ZIP.")

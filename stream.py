@@ -58,7 +58,7 @@ def download_file_from_github(url, save_path):
     else:
         print(f"Failed to download file. Status code: {response.status_code}")
      
-url = 'https://raw.githubusercontent.com/ferifirmansah05/ads_mvn/main/database provinsi.xlsx'
+url = 'https://raw.githubusercontent.com/Analyst-FPnA/Rekap-SCM/blob/DATABASE_IA.xlsx'
 
 # Path untuk menyimpan file yang diunduh
 save_path = 'DATABASE_IA.xlsx'

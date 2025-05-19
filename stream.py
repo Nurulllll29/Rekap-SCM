@@ -102,12 +102,14 @@ if uploaded_file is not None:
 
         if selected_option == 'REKAP PENYESUAIAN STOK (IA)':
             nama_file = uploaded_file.name.replace('.zip','')
+            db_ia = load_excel(save_path)
             with tempfile.TemporaryDirectory() as tmpdirname:
                 # Ekstrak file ZIP ke direktori sementara
                 with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
                     zip_ref.extractall(tmpdirname)
                 non_com = ['SUPPLIES [OTHERS]','00.COST','20.ASSET.ASSET','21.COST.ASSET']
                 concatenated_df = []
+             
                 for file in os.listdir(tmpdirname):
                     if file.startswith('4217'):
                         df_4217     =   pd.read_excel(tmpdirname+'/'+file, header=4).fillna('')

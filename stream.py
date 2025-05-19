@@ -188,7 +188,13 @@ if uploaded_file is not None:
                             df_ia = df_ia.rename(columns={'Kode Barang':'Kode','Satuan':'UNIT','DEVIASI(Rumus)':'Kuantitas','Nama Cabang':'Gudang'}).loc[:,['Nama Barang','Kode','UNIT','Kuantitas','Gudang','Tipe Penyesuaian']]
                             if not df_ia.empty:
                                 df_ia.to_excel(f'{folder}/{kat}_{cab}_{nama_file}.xlsx', index=False)
-                        else:
+                        if kat in ['Consume']:
+                            df_ia = df_4217[(df_4217['Nama Barang'].isin(db_ia[db_ia['KATEGORI']==kat]['FILTER']))
+                                            & (df_4217['Cabang']==cab)] 
+                            df_ia = df_ia.rename(columns={'Kode Barang':'Kode','Satuan':'UNIT','DEVIASI(Rumus)':'Kuantitas','Nama Cabang':'Gudang'}).loc[:,['Nama Barang','Kode','UNIT','Kuantitas','Gudang','Tipe Penyesuaian']]
+                            if not df_ia.empty:
+                                df_ia.to_excel(f'{folder}/{kat}_{cab}_{nama_file}.xlsx', index=False)
+                        else:         
                             df_ia = df_4217[(df_4217['Nama Barang'].isin(db_ia[db_ia['KATEGORI']==kat]['FILTER']))
                                             & (df_4217['Cabang']==cab) & (df_4217['Kategori Barang'].isin(non_com))] 
                             df_ia = df_ia.rename(columns={'Kode Barang':'Kode','Satuan':'UNIT','DEVIASI(Rumus)':'Kuantitas','Nama Cabang':'Gudang'}).loc[:,['Nama Barang','Kode','UNIT','Kuantitas','Gudang','Tipe Penyesuaian']]

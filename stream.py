@@ -12,6 +12,7 @@ import zipfile
 from xlsxwriter import Workbook
 import tempfile
 import re
+import io
   
 def load_excel(file_path):
     with open(file_path, 'rb') as file:

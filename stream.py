@@ -12,7 +12,7 @@ import zipfile
 from xlsxwriter import Workbook
 import tempfile
 import re
-
+ 
 def load_excel(file_path):
     with open(file_path, 'rb') as file:
         model = pd.read_excel(file, engine='openpyxl')

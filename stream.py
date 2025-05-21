@@ -44,7 +44,7 @@ def get_current_time_gmt7():
     
 st.title('SCM-Cleaning')
 
-selected_option = st.selectbox("Pilih salah satu:", ['LAPORAN SO HARIAN','REKAP PENYESUAIAN STOK (IA)','PROMIX','REKAP SO'])
+selected_option = st.selectbox("Pilih salah satu:", ['LAPORAN SO HARIAN','REKAP PENYESUAIAN STOK (IA)','PROMIX','REKAP SO','WEBSMART (DINE IN/TAKEAWAY)'])
 if selected_option == 'LAPORAN SO HARIAN':
     st.write('Upload file format *zip')
 if selected_option == 'REKAP PENYESUAIAN STOK (IA)':
@@ -52,6 +52,8 @@ if selected_option == 'REKAP PENYESUAIAN STOK (IA)':
 if selected_option == 'PROMIX':
     st.write('Upload file format *xlsx')
 if selected_option == 'REKAP SO':
+    st.write('Upload file format *zip')
+if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
     st.write('Upload file format *zip')
  
 def download_file_from_github(url, save_path):
@@ -273,3 +275,51 @@ if uploaded_file is not None:
                    )
                else:
                    st.warning("Tidak ada file .xlsx ditemukan dalam ZIP.")
+
+        if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
+            with tempfile.TemporaryDirectory() as tmpdirname:
+               # Ekstrak file ZIP ke folder sementara
+               with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                   zip_ref.extractall(tmpdirname)
+               
+               all_dfs = []
+               for filename in os.listdir(tmpdirname):
+                   if filename.endswith('.xls'):
+                        file_path = os.path.join(tmpdirname, filename)
+                        df_qty = pd.read_html(f'{file_path}.xls')[0]
+                        df_qty = df_qty[df_qty.iloc[1:,].columns[df_qty.iloc[1:,].apply(lambda col: col.astype(str).str.contains('QTY', case=False, na=False).any())]]
+                        df_qty.iloc[0,:] = df_qty.iloc[0,:] + '_QTY'
+                        df_qty.columns = df_qty.iloc[0,:]
+                        try:
+                            df_qty = df_qty.iloc[2:,:-2].iloc[:-1].drop(columns='OFFLINE_QTY')
+                        except:
+                            df_qty = df_qty.iloc[2:,:-2].iloc[:-1]
+                        df_qty.iloc[:,1:] = df_qty.iloc[:,1:].astype(float)
+                        df_rp = pd.read_html(f'{file_path}.xls')[0]
+                        df_rp = df_rp[df_rp.iloc[1:,].columns[df_rp.iloc[1:,].apply(lambda col: col.astype(str).str.contains('Rp', case=False, na=False).any())]]
+                        df_rp.iloc[0,1:] = df_rp.iloc[0,1:] + '_RP'
+                        df_rp.columns = df_rp.iloc[0,:]
+                        try:
+                            df_rp = df_rp.iloc[2:,:-2].iloc[:-1].drop(columns='OFFLINE_QTY')
+                        except:
+                            df_rp = df_rp.iloc[2:,:-2].iloc[:-1]
+                        df_rp.iloc[:,1:] = df_rp.iloc[:,1:].astype(float)
+                        df = df_rp.reset_index().merge(df_qty.reset_index(), on='index')
+                        df = df.melt(id_vars=['RESTO'], value_vars=df.iloc[:,1:].columns,value_name='RP',var_name='CATEGORY')
+                        df[['CATEGORY','Variable']] = df['CATEGORY'].str.split('_', n=1, expand=True)
+                        df = df[df['Variable']=='QTY'].reset_index(drop=True).reset_index().merge(df[df['Variable']=='RP'].reset_index(drop=True).reset_index(), on=['index','RESTO','CATEGORY']).drop(columns=['index','Variable_x','Variable_y']).rename(columns={'RP_x':'QTY','RP_y':'VALUE'})
+                        df['TYPE'] = df['CATEGORY'].apply(lambda x: x if x=='DINE IN' else 'TAKE AWAY')
+                        df['MONTH'] = re.findall(r'_(\w+)', file)[-1]
+                        df = df.sort_values(['RESTO','TYPE']).reset_index(drop=True)
+                        all_dfs.append(df)
+    
+               if all_dfs:
+                   df_combined = pd.concat(all_dfs, ignore_index=True)
+       
+                   # Tombol download hasil
+                   st.download_button(
+                       label="Download Gabungan Excel",
+                       data=to_excel(df_combined),
+                       file_name=f'WEBSMART (DINE IN/TAKEAWAY) Combine_{get_current_time_gmt7()}.xlsx',
+                       mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                   )

@@ -286,7 +286,7 @@ if uploaded_file is not None:
                for filename in os.listdir(tmpdirname):
                    if filename.endswith('.xls'):
                         file_path = os.path.join(tmpdirname, filename)
-                        df_qty = pd.read_html(f'{file_path}.xls',encoding='ISO-8859-1')[0]
+                        df_qty = pd.read_html(f'{file_path}',encoding='ISO-8859-1')[0]
                         df_qty = df_qty[df_qty.iloc[1:,].columns[df_qty.iloc[1:,].apply(lambda col: col.astype(str).str.contains('QTY', case=False, na=False).any())]]
                         df_qty.iloc[0,:] = df_qty.iloc[0,:] + '_QTY'
                         df_qty.columns = df_qty.iloc[0,:]
@@ -295,7 +295,7 @@ if uploaded_file is not None:
                         except:
                             df_qty = df_qty.iloc[2:,:-2].iloc[:-1]
                         df_qty.iloc[:,1:] = df_qty.iloc[:,1:].astype(float)
-                        df_rp = pd.read_html(f'{file_path}.xls',encoding='ISO-8859-1')[0]
+                        df_rp = pd.read_html(f'{file_path}',encoding='ISO-8859-1')[0]
                         df_rp = df_rp[df_rp.iloc[1:,].columns[df_rp.iloc[1:,].apply(lambda col: col.astype(str).str.contains('Rp', case=False, na=False).any())]]
                         df_rp.iloc[0,1:] = df_rp.iloc[0,1:] + '_RP'
                         df_rp.columns = df_rp.iloc[0,:]

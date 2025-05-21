@@ -286,7 +286,6 @@ if uploaded_file is not None:
                for filename in os.listdir(tmpdirname):
                    if filename.endswith('.xls'):
                         file_path = os.path.join(tmpdirname, filename)
-                        st.write(pd.read_html(f'{file_path}'))
                         df_qty = pd.read_html(f'{file_path}')[0]
                         df_qty = df_qty[df_qty.iloc[1:,].columns[df_qty.iloc[1:,].apply(lambda col: col.astype(str).str.contains('QTY', case=False, na=False).any())]]
                         df_qty.iloc[0,:] = df_qty.iloc[0,:] + '_QTY'
@@ -310,7 +309,7 @@ if uploaded_file is not None:
                         df[['CATEGORY','Variable']] = df['CATEGORY'].str.split('_', n=1, expand=True)
                         df = df[df['Variable']=='QTY'].reset_index(drop=True).reset_index().merge(df[df['Variable']=='RP'].reset_index(drop=True).reset_index(), on=['index','RESTO','CATEGORY']).drop(columns=['index','Variable_x','Variable_y']).rename(columns={'RP_x':'QTY','RP_y':'VALUE'})
                         df['TYPE'] = df['CATEGORY'].apply(lambda x: x if x=='DINE IN' else 'TAKE AWAY')
-                        df['MONTH'] = re.findall(r'_(\w+)', file)[-1]
+                        df['MONTH'] = re.findall(r'_(\w+)', filename)[-1]
                         df = df.sort_values(['RESTO','TYPE']).reset_index(drop=True)
                         all_dfs.append(df)
     

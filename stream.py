@@ -282,7 +282,7 @@ if uploaded_file is not None:
                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
                    zip_ref.extractall(tmpdirname)
                
-               all_dfs = []
+               all_dfs = [] 
                for filename in os.listdir(tmpdirname):
                    if filename.endswith('.xls'):
                         file_path = os.path.join(tmpdirname, filename)

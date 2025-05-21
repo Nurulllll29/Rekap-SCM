@@ -286,6 +286,7 @@ if uploaded_file is not None:
                for filename in os.listdir(tmpdirname):
                    if filename.endswith('.xls'):
                         file_path = os.path.join(tmpdirname, filename)
+                        st.write(pd.read_html(f'{file_path}'))
                         df_qty = pd.read_html(f'{file_path}')[0]
                         df_qty = df_qty[df_qty.iloc[1:,].columns[df_qty.iloc[1:,].apply(lambda col: col.astype(str).str.contains('QTY', case=False, na=False).any())]]
                         df_qty.iloc[0,:] = df_qty.iloc[0,:] + '_QTY'

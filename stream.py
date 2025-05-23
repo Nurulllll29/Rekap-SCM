@@ -328,50 +328,51 @@ if uploaded_file is not None:
 
         if selected_option == 'PENYESUAIAN IA':
             with tempfile.TemporaryDirectory() as tmpdirname:
-               with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-                   zip_ref.extractall(tmpdirname)
-
-                all_dfs = []
-                for file_info in zip_ref.infolist():
-                    if file_info.filename.endswith(('.xlsx', '.xls', '.csv')):
-                        with zip_ref.open(file_info.filename) as file:
-                            try:
-                                # Baca file sesuai format
-                                if file_info.filename.endswith('.csv'):
-                                    df = pd.read_csv(file, skiprows=9)
-                                else:
-                                    df = pd.read_excel(file, skiprows=9)
-                                
-                                df.drop(df.columns[0], axis=1, inplace=True)
-                                if 'Kode' in df.columns:
-                                    df = df[~df['Kode'].isin(['Penyesuaian Persediaan', 'Keterangan', 'Kode'])]
-                                    df = df[df['Kode'].notna()]
-                                if 'Tipe' in df.columns:
-                                    mask_penambahan = df['Tipe'].str.lower() == 'penambahan'
-                                    for col in ['Kts.', 'Total Biaya']:
-                                        if col in df.columns:
-                                            df.loc[mask_penambahan, col] = df.loc[mask_penambahan, col] * -1
-                                df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
-                                if 'Gudang' in df.columns:
-                                    def transform_gudang(val):
-                                        try:
-                                            prefix = re.search(r'^(\d+)', str(val))
-                                            kode = re.search(r'\((.*?)\)', str(val))
-                                            if prefix and kode:
-                                                return f"{prefix.group(1)}.{kode.group(1)}"
-                                            else:
-                                                return val  # jika tidak cocok, biarkan seperti semula
-                                        except:
-                                            return val
-                                    df['Gudang'] = df['Gudang'].apply(transform_gudang)
-                                all_ddfs.append(df)
-               if all_dfs:
-                   df_combined = pd.concat(all_dfs, ignore_index=True)
-       
-                   # Tombol download hasil
-                   st.download_button(
-                       label="Download Gabungan Excel",
-                       data=to_excel(df_combined),
-                       file_name=f'Penyesuaian IA Combine_{get_current_time_gmt7()}.xlsx',
-                       mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                   )
+                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                    zip_ref.extractall(tmpdirname)
+        
+                    all_dfs = []
+                    for file_info in zip_ref.infolist():
+                        if file_info.filename.endswith(('.xlsx', '.xls', '.csv')):
+                            with zip_ref.open(file_info.filename) as file:
+                                try:
+                                    if file_info.filename.endswith('.csv'):
+                                        df = pd.read_csv(file, skiprows=9)
+                                    else:
+                                        df = pd.read_excel(file, skiprows=9)
+        
+                                    df.drop(df.columns[0], axis=1, inplace=True)
+                                    if 'Kode' in df.columns:
+                                        df = df[~df['Kode'].isin(['Penyesuaian Persediaan', 'Keterangan', 'Kode'])]
+                                        df = df[df['Kode'].notna()]
+                                    if 'Tipe' in df.columns:
+                                        mask_penambahan = df['Tipe'].str.lower() == 'penambahan'
+                                        for col in ['Kts.', 'Total Biaya']:
+                                            if col in df.columns:
+                                                df.loc[mask_penambahan, col] = df.loc[mask_penambahan, col] * -1
+                                    df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
+                                    if 'Gudang' in df.columns:
+                                        def transform_gudang(val):
+                                            try:
+                                                prefix = re.search(r'^(\d+)', str(val))
+                                                kode = re.search(r'\((.*?)\)', str(val))
+                                                if prefix and kode:
+                                                    return f"{prefix.group(1)}.{kode.group(1)}"
+                                                else:
+                                                    return val
+                                            except:
+                                                return val
+                                        df['Gudang'] = df['Gudang'].apply(transform_gudang)
+                                    all_dfs.append(df)  # <-- perbaikan typo di sini
+                                except Exception as e:
+                                    st.error(f"Error processing {file_info.filename}: {e}")
+        
+            if all_dfs:
+                df_combined = pd.concat(all_dfs, ignore_index=True)
+        
+                st.download_button(
+                    label="Download Gabungan Excel",
+                    data=to_excel(df_combined),
+                    file_name=f'Penyesuaian IA Combine_{get_current_time_gmt7()}.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )

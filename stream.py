@@ -367,13 +367,14 @@ if uploaded_file is not None:
                                 except Exception as e:
                                     st.error(f"Error processing {file_info.filename}: {e}")
         
-                if all_dfs:
-                    final_df = pd.concat(all_dfs, ignore_index=True)
+            if all_dfs:
+                final_df = pd.concat(all_dfs, ignore_index=True)
         
                 # HARGA
-                harga_path = os.path.join(tmpdirname, "Penyesuaian IA", "bahan", "Harga.xlsx")
-                harga = pd.read_excel(harga_path, skiprows=4).fillna("").drop(columns={'Kategori Barang','Kode Barang','Nama Satuan','Saldo Awal','Masuk','Keluar'})
-                harga = harga[~harga['Nama Barang'].isin(['Total Nama Barang',''])].rename(columns={'Saldo Akhir':'Kuantitas','Unnamed: 14':'Nilai'})
+                harga = pd.read_excel(f"{tmpdirname}/Penyesuaian IA/bahan/Harga.xlsx", skiprows=4).fillna("").drop(
+                    columns={'Kategori Barang', 'Kode Barang', 'Nama Satuan', 'Saldo Awal', 'Masuk', 'Keluar'})
+                harga = harga[~harga['Nama Barang'].isin(['Total Nama Barang', ''])].rename(
+                    columns={'Saldo Akhir': 'Kuantitas', 'Unnamed: 14': 'Nilai'})
                 harga = harga[harga['Nama Barang'].notna()]
                 harga = harga.loc[:, ~harga.columns.str.startswith('Unnamed')]
         
@@ -382,11 +383,10 @@ if uploaded_file is not None:
                         return abs(row['Nilai'] / row['Kuantitas'])
                     except:
                         return 0
+        
                 harga['Harga'] = harga.apply(safe_divide, axis=1)
         
-                # REKAP
-                rekap_path = os.path.join(tmpdirname, "Penyesuaian IA", "bahan", "REKAP PENYESUAIAN STOK (IA)")
-        
+                rekap_path = f"{tmpdirname}/Penyesuaian IA/bahan/REKAP PENYESUAIAN STOK (IA)"
                 all_files = []
                 for root, dirs, files in os.walk(rekap_path):
                     for file in files:
@@ -427,6 +427,7 @@ if uploaded_file is not None:
                         return row['REKAP'] - row['Kts.']
                     except:
                         return 0
+        
                 final_df['SELISIH'] = final_df.apply(selisih, axis=1)
         
                 final_df['Nama Barang'] = final_df['Nama Barang'].astype(str)

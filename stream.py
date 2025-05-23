@@ -370,9 +370,14 @@ if uploaded_file is not None:
             if all_dfs:
                 final_df = pd.concat(all_dfs, ignore_index=True)
         
-                # HARGA
-                harga = pd.read_excel(f"{tmpdirname}/Penyesuaian IA/bahan/Harga.xlsx", skiprows=4).fillna("").drop(
-                    columns={'Kategori Barang', 'Kode Barang', 'Nama Satuan', 'Saldo Awal', 'Masuk', 'Keluar'})
+                # Load Harga
+                try:
+                    harga = pd.read_excel(f"{tmpdirname}/Penyesuaian IA/bahan/Harga.xlsx", skiprows=4).fillna("").drop(
+                        columns={'Kategori Barang', 'Kode Barang', 'Nama Satuan', 'Saldo Awal', 'Masuk', 'Keluar'})
+                except Exception as e:
+                    st.error(f"Gagal membaca Harga.xlsx: {e}")
+                    st.stop()
+        
                 harga = harga[~harga['Nama Barang'].isin(['Total Nama Barang', ''])].rename(
                     columns={'Saldo Akhir': 'Kuantitas', 'Unnamed: 14': 'Nilai'})
                 harga = harga[harga['Nama Barang'].notna()]
@@ -386,7 +391,21 @@ if uploaded_file is not None:
         
                 harga['Harga'] = harga.apply(safe_divide, axis=1)
         
-                rekap_path = f"{tmpdirname}/Penyesuaian IA/bahan/REKAP PENYESUAIAN STOK (IA)"
+                # Cari folder REKAP PENYESUAIAN STOK (IA) secara dinamis
+                rekap_path = ""
+                for root, dirs, files in os.walk(tmpdirname):
+                    for dir_name in dirs:
+                        if dir_name.strip().lower() == "rekap penyesuaian stok (ia)":
+                            rekap_path = os.path.join(root, dir_name)
+                            break
+                    if rekap_path:
+                        break
+        
+                if not rekap_path:
+                    st.error("Folder 'REKAP PENYESUAIAN STOK (IA)' tidak ditemukan di dalam ZIP.")
+                    st.stop()
+        
+                # Gabungkan semua file dari folder tersebut
                 all_files = []
                 for root, dirs, files in os.walk(rekap_path):
                     for file in files:

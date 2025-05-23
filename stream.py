@@ -343,9 +343,6 @@ if uploaded_file is not None:
                     df.to_excel(writer, index=False, sheet_name="Cleaned")
                 return output.getvalue()
             
-            # Upload file ZIP
-            uploaded_file = st.file_uploader("📁 Upload file ZIP berisi Excel/CSV", type="zip")
-            
             if uploaded_file:
                 all_data = []
             

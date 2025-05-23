@@ -44,7 +44,7 @@ def get_current_time_gmt7():
     
 st.title('SCM-Cleaning')
 
-selected_option = st.selectbox("Pilih salah satu:", ['REKAP MENTAH','REKAP PENYESUAIAN INPUTAN IA','PROMIX','REKAP DATA 42.02','WEBSMART (DINE IN/TAKEAWAY)','Penyesuaian IA'])
+selected_option = st.selectbox("Pilih salah satu:", ['REKAP MENTAH','REKAP PENYESUAIAN INPUTAN IA','PROMIX','REKAP DATA 42.02','WEBSMART (DINE IN/TAKEAWAY)','PENYESUAIAN IA'])
 if selected_option == 'REKAP MENTAH':
     st.write('Upload file format *zip')
 if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':
@@ -55,7 +55,7 @@ if selected_option == 'REKAP DATA 42.02':
     st.write('Upload file format *zip')
 if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
     st.write('Upload file format *zip')
-if selected_option == 'Penyesuaian IA':
+if selected_option == 'PENYESUAIAN IA':
     st.write('Upload file format *zip')
  
 def download_file_from_github(url, save_path):
@@ -326,15 +326,14 @@ if uploaded_file is not None:
                        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                    )
 
-        if selected_option == 'Penyesuaian IA':
+        if selected_option == 'PENYESUAIAN IA':
             with tempfile.TemporaryDirectory() as tmpdirname:
-               # Ekstrak file ZIP ke folder sementara
                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
                    zip_ref.extractall(tmpdirname)
 
                 all_dfs = []
                 
-                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
                     for file_info in zip_ref.infolist():
                         if file_info.filename.endswith(('.xlsx', '.xls', '.csv')):
                             with zip_ref.open(file_info.filename) as file:
@@ -345,26 +344,20 @@ if uploaded_file is not None:
                                     else:
                                         df = pd.read_excel(file, skiprows=9)
                                     
-                                    # Hapus kolom pertama
                                     df.drop(df.columns[0], axis=1, inplace=True)
                 
-                                    # Filter berdasarkan kolom 'Kode'
                                     if 'Kode' in df.columns:
                                         df = df[~df['Kode'].isin(['Penyesuaian Persediaan', 'Keterangan', 'Kode'])]
                                         df = df[df['Kode'].notna()]
-                                    
-                                    # Ubah nilai kolom Kts. dan Total Biaya jika Tipe = "Penambahan"
                                     if 'Tipe' in df.columns:
                                         mask_penambahan = df['Tipe'].str.lower() == 'penambahan'
                                         for col in ['Kts.', 'Total Biaya']:
                                             if col in df.columns:
                                                 df.loc[mask_penambahan, col] = df.loc[mask_penambahan, col] * -1
                 
-                                                        # Hapus kolom yang berawalan 'Unnamed'
                                     df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
                 
                                     if 'Gudang' in df.columns:
-                                        import re
                                         def transform_gudang(val):
                                             try:
                                                 prefix = re.search(r'^(\d+)', str(val))

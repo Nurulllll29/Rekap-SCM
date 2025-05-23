@@ -44,7 +44,7 @@ def get_current_time_gmt7():
     
 st.title('SCM-Cleaning')
 
-selected_option = st.selectbox("Pilih salah satu:", ['REKAP MENTAH','REKAP PENYESUAIAN INPUTAN IA','PROMIX','REKAP DATA 42.02','WEBSMART (DINE IN/TAKEAWAY)','Penyesuaian IA])
+selected_option = st.selectbox("Pilih salah satu:", ['REKAP MENTAH','REKAP PENYESUAIAN INPUTAN IA','PROMIX','REKAP DATA 42.02','WEBSMART (DINE IN/TAKEAWAY)','Penyesuaian IA'])
 if selected_option == 'REKAP MENTAH':
     st.write('Upload file format *zip')
 if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':

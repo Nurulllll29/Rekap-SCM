@@ -371,7 +371,7 @@ if uploaded_file is not None:
                 final_df = pd.concat(all_dfs, ignore_index=True)
 
             #HARGA
-            harga = pd.read_excel("tempdirname/Penyesuaian IA/bahan/Harga.xlsx", skiprows=4).fillna("").drop(columns={'Kategori Barang','Kode Barang','Nama Satuan','Saldo Awal','Masuk','Keluar'})
+            harga = pd.read_excel("tmpdirname/Penyesuaian IA/bahan/Harga.xlsx", skiprows=4).fillna("").drop(columns={'Kategori Barang','Kode Barang','Nama Satuan','Saldo Awal','Masuk','Keluar'})
             harga = harga[~harga['Nama Barang'].isin(['Total Nama Barang',''])].rename(columns={'Saldo Akhir':'Kuantitas','Unnamed: 14':'Nilai'})
             harga = harga[harga['Nama Barang'].notna()]
             harga = harga.loc[:, ~harga.columns.str.startswith('Unnamed')]

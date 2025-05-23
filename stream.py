@@ -45,15 +45,17 @@ def get_current_time_gmt7():
 st.title('SCM-Cleaning')
 
 selected_option = st.selectbox("Pilih salah satu:", ['LAPORAN SO HARIAN','REKAP PENYESUAIAN STOK (IA)','PROMIX','REKAP SO','WEBSMART (DINE IN/TAKEAWAY)'])
-if selected_option == 'LAPORAN SO HARIAN':
+if selected_option == 'REKAP MENTAH':
     st.write('Upload file format *zip')
-if selected_option == 'REKAP PENYESUAIAN STOK (IA)':
+if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':
     st.write('Upload file format *zip')
 if selected_option == 'PROMIX':
     st.write('Upload file format *xlsx')
-if selected_option == 'REKAP SO':
+if selected_option == 'REKAP DATA 42.02':
     st.write('Upload file format *zip')
 if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
+    st.write('Upload file format *zip')
+if selected_option == 'Penyesuaian IA':
     st.write('Upload file format *zip')
  
 def download_file_from_github(url, save_path):
@@ -83,7 +85,7 @@ uploaded_file = st.file_uploader("Pilih file", type=["zip",'xlsx'])
 if uploaded_file is not None:
   if st.button('Process'):
       with st.spinner('Data sedang diproses...'):
-        if selected_option == 'LAPORAN SO HARIAN':
+        if selected_option == 'REKAP MENTAH':
             with tempfile.TemporaryDirectory() as tmpdirname:
                 # Ekstrak file ZIP ke direktori sementara
                 with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
@@ -107,7 +109,7 @@ if uploaded_file is not None:
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )   
 
-        if selected_option == 'REKAP PENYESUAIAN STOK (IA)':
+        if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':
             nama_file = uploaded_file.name.replace('.zip','')
             db_ia = load_excel(save_path)
             with tempfile.TemporaryDirectory() as tmpdirname:
@@ -241,7 +243,7 @@ if uploaded_file is not None:
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                     )
          
-        if selected_option == 'REKAP SO':
+        if selected_option == 'REKAP DATA 42.02':
             with tempfile.TemporaryDirectory() as tmpdirname:
                # Ekstrak file ZIP ke folder sementara
                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
@@ -323,3 +325,83 @@ if uploaded_file is not None:
                        file_name=f'WEBSMART (DINE IN/TAKEAWAY) Combine_{get_current_time_gmt7()}.xlsx',
                        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                    )
+                   
+        if selected_option == 'Penyesuaian IA':import streamlit as st
+            def transform_gudang(val):
+                try:
+                    prefix = re.search(r'^(\d+)', str(val))
+                    kode = re.search(r'\((.*?)\)', str(val))
+                    if prefix and kode:
+                        return f"{prefix.group(1)}.{kode.group(1)}"
+                    return val
+                except:
+                    return val
+            
+            def to_excel(df):
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                    df.to_excel(writer, index=False, sheet_name="Cleaned")
+                return output.getvalue()
+            
+            # Upload file ZIP
+            uploaded_file = st.file_uploader("📁 Upload file ZIP berisi Excel/CSV", type="zip")
+            
+            if uploaded_file:
+                all_data = []
+            
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                        zip_ref.extractall(tmpdirname)
+            
+                    for filename in os.listdir(tmpdirname):
+                        if filename.endswith(('.xlsx', '.xls', '.csv')):
+                            file_path = os.path.join(tmpdirname, filename)
+                            try:
+                                # Baca file dengan skip 9 baris
+                                if filename.endswith('.csv'):
+                                    df = pd.read_csv(file_path, skiprows=9)
+                                else:
+                                    df = pd.read_excel(file_path, skiprows=9)
+            
+                                # Hapus kolom pertama
+                                df.drop(df.columns[0], axis=1, inplace=True)
+            
+                                # Filter Kode
+                                if 'Kode' in df.columns:
+                                    df = df[~df['Kode'].isin(['Penyesuaian Persediaan', 'Keterangan', 'Kode'])]
+                                    df = df[df['Kode'].notna()]
+            
+                                # Penambahan → angka negatif
+                                if 'Tipe' in df.columns:
+                                    mask_penambahan = df['Tipe'].str.lower() == 'penambahan'
+                                    for col in ['Kts.', 'Total Biaya']:
+                                        if col in df.columns:
+                                            df.loc[mask_penambahan, col] = df.loc[mask_penambahan, col] * -1
+            
+                                # Hapus kolom Unnamed
+                                df = df.loc[:, ~df.columns.str.startswith('Unnamed')]
+            
+                                # Transformasi kolom Gudang
+                                if 'Gudang' in df.columns:
+                                    df['Gudang'] = df['Gudang'].apply(transform_gudang)
+            
+                                all_data.append(df)
+            
+                            except Exception as e:
+                                st.error(f"Gagal membaca {filename}: {e}")
+            
+                if all_data:
+                    final_df = pd.concat(all_data, ignore_index=True)
+            
+                    st.success("✅ Data berhasil dibersihkan dan digabung!")
+                    st.dataframe(final_df.head(20))
+            
+                    # Tombol download
+                    st.download_button(
+                        label="Download Penyesuaian IA",
+                        data=to_excel(final_df),
+                        file_name="Penyesuaian IA (Clean)_{get_current_time_gmt7()}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                else:
+                    st.warning("❗ Tidak ada file yang berhasil diproses.")

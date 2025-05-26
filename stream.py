@@ -469,7 +469,7 @@ if uploaded_file is not None:
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
                 
-        if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':
+        if selected_option == 'REKAP DATA BOM-DEVIASI':
             with tempfile.TemporaryDirectory() as tmpdirname:
                 with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
                     zip_ref.extractall(tmpdirname)

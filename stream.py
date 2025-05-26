@@ -471,10 +471,9 @@ if uploaded_file is not None:
                 
         if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':
             with tempfile.TemporaryDirectory() as tmpdirname:
-                # Ekstrak file ZIP ke direktori sementara
                 with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
                     zip_ref.extractall(tmpdirname)
-
+    
                 dir_db = tmpdirname+'/Database/'
                 dir_raw = tmpdirname+'/Raw Data/'
                 

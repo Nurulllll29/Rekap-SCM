@@ -568,5 +568,3 @@ if uploaded_file is not None:
                     file_name=f'REKAP DATA BOM-DEVIASI_{get_current_time_gmt7()}.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
-                
-                    zip_ref.extractall(tmpdirname)

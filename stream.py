@@ -44,20 +44,22 @@ def get_current_time_gmt7():
     
 st.title('SCM-Cleaning')
 
-selected_option = st.selectbox("Pilih salah satu:", ['REKAP MENTAH','REKAP PENYESUAIAN INPUTAN IA','PROMIX','REKAP DATA 42.02','WEBSMART (DINE IN/TAKEAWAY)','PENYESUAIAN IA'])
+selected_option = st.selectbox("Pilih salah satu:", ['REKAP MENTAH','REKAP PENYESUAIAN INPUTAN IA','REKAP DATA 42.02','REKAP DATA BOM-DEVIASI','PENYESUAIAN IA','PROMIX','WEBSMART (DINE IN/TAKEAWAY)'])
 if selected_option == 'REKAP MENTAH':
     st.write('Upload file format *zip')
 if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':
     st.write('Upload file format *zip')
-if selected_option == 'PROMIX':
-    st.write('Upload file format *xlsx')
 if selected_option == 'REKAP DATA 42.02':
     st.write('Upload file format *zip')
-if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
+if selected_option == 'REKAP DATA BOM-DEVIASI':
     st.write('Upload file format *zip')
 if selected_option == 'PENYESUAIAN IA':
     st.write('Upload file format *zip')
- 
+if selected_option == 'PROMIX':
+    st.write('Upload file format *xlsx')
+ if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
+    st.write('Upload file format *zip')   
+     
 def download_file_from_github(url, save_path):
     response = requests.get(url)
     if response.status_code == 200:
@@ -466,3 +468,106 @@ if uploaded_file is not None:
                     file_name=f'Penyesuaian IA Combine_{get_current_time_gmt7()}.xlsx',
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
+                
+        if selected_option == 'REKAP PENYESUAIAN INPUTAN IA':
+            with tempfile.TemporaryDirectory() as tmpdirname:
+                # Ekstrak file ZIP ke direktori sementara
+                with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+                    zip_ref.extractall(tmpdirname)
+
+                dir_db = tmpdirname+'/Database/'
+                dir_raw = tmpdirname+'/Raw Data/'
+                
+                for file in os.listdir(dir_raw):
+                    if file.startswith('4101'):
+                        df_4101 =   pd.read_excel(dir_raw+file, header=4)
+                        df_4101= df_4101[~df_4101['Nama Cabang'].isna()].loc[:, ~df_4101.columns.str.startswith('Unnamed')]
+                        df_4101 = df_4101[df_4101['Akun Penyesuaian Persediaan'].isin(['COM Deviasi - Resto','COM Consume - Resto', 'Biaya Packaging - RESTO'])].reset_index(drop=True)
+                        df_4101.loc[df_4101[df_4101['Tipe Penyesuaian']=='Pengurangan'].index,['Kuantitas','Total Biaya']] = - df_4101[df_4101['Tipe Penyesuaian']=='Pengurangan'][['Kuantitas','Total Biaya']]
+                        df_4101 = df_4101.groupby(['Nama Cabang','Nama Barang'])[['Kuantitas','Total Biaya']].sum().reset_index()
+                        df_4101['Cabang'] = df_4101['Nama Cabang'].str.extract(r'\.(.+)')
+                    if file.startswith('4104') and ('ACR' in file):
+                        df_4104b = pd.read_excel(dir_raw+file,header=4)
+                        df_4104b = df_4104b.dropna(how='all',axis=1)
+                        df_4104b = df_4104b.iloc[1:-1,:]
+                        df_db = pd.DataFrame({'variable':[x for x in df_4104b.columns if 'Unnamed' in x],'Nama Barang':[x for x in df_4104b.columns if 'Unnamed' not in x][1:]})
+                        df_4104b = df_4104b.melt(id_vars='Nama Gudang', value_vars=[x for x in df_4104b.columns if 'Unnamed' not in x][1:],value_name='Nominal Kts Keluar', var_name='Nama Barang').merge(
+                        df_4104b.melt(id_vars='Nama Gudang', value_vars=[x for x in df_4104b.columns if 'Unnamed' in x],value_name='Kts Keluar').merge(df_db,how='left',on='variable'), how='left', on=['Nama Gudang','Nama Barang']).drop(columns='variable')
+                        df_4104b.loc[:,['Nominal Kts Keluar', 'Kts Keluar']] = - df_4104b[['Nominal Kts Keluar', 'Kts Keluar']]
+                    if file.startswith('4104') and ('CN' in file):
+                        df_4104d = pd.read_excel(dir_raw+file,header=4)
+                        df_4104d = df_4104d.dropna(how='all',axis=1)
+                        df_4104d = df_4104d.iloc[1:-1,:]
+                        df_db = pd.DataFrame({'variable':[x for x in df_4104d.columns if 'Unnamed' in x],'Nama Barang':[x for x in df_4104d.columns if 'Unnamed' not in x][1:]})
+                        df_4104d = df_4104d.melt(id_vars='Nama Gudang', value_vars=[x for x in df_4104d.columns if 'Unnamed' not in x][1:],value_name='Nominal Kts Keluar', var_name='Nama Barang').merge(
+                        df_4104d.melt(id_vars='Nama Gudang', value_vars=[x for x in df_4104d.columns if 'Unnamed' in x],value_name='Kts Keluar').merge(df_db,how='left',on='variable'), how='left', on=['Nama Gudang','Nama Barang']).drop(columns='variable')
+                    if file.startswith('3224'):
+                        df_3224 = pd.read_excel(dir_raw+file, skiprows=range(0, 4))
+                        df_3224 = df_3224.loc[:,['Tanggal','Nomor # PO','Nomor # RI','Pemasok','Kode #','Nama Barang','Kts Terima','Satuan','@Harga','Total Harga','#Kts Ditagih','Nama Gudang','Nama Cabang Penerimaan Barang','Status Penerimaan Barang','Pembuat Data','Tgl/Jam Pembuatan']]
+                        df_3224 = df_3224[~df_3224['Nomor # PO' ].isna()]
+                        df_3224 = df_3224[df_3224['Nama Barang']=='KABEL TIES - RESTO'].groupby(['Nama Cabang Penerimaan Barang','Nama Barang'])[['Kts Terima','Total Harga']].sum().reset_index().rename(columns={'Nama Cabang Penerimaan Barang':'Nama Cabang','Kts Terima':'QTY RI','Total Harga':'NOMINAL RI'})
+                    if file.startswith('1333'):
+                        omset = pd.read_excel(dir_raw+file, header=2).drop_duplicates().rename(columns={'Row Labels':'Nama Cabang'})[['Nama Cabang','OMSET']]
+                    if file.startswith('DATA WASUTRI'):
+                        df_wst = pd.read_excel(dir_raw+file)[['NAMA RESTO','NAMA BARANG','QTY','KETERANGAN']]
+                        df_wst = df_wst.rename(columns={'NAMA BARANG':'Nama Barang','NAMA RESTO':'Nama Cabang'}).groupby(['Nama Cabang','Nama Barang','KETERANGAN'])[['QTY']].sum().reset_index()
+                    if file.startswith('NOMINAL BIANG'):
+                        nb = pd.read_excel(dir_raw+file)
+                        nb['NOMINAL BIANG PER GRAM'] = nb['Nominal'] / nb['Qty']
+                
+                for file in os.listdir(dir_db):
+                    if file.startswith('TEMPLATE KLASIFIKASI'):
+                        db = pd.read_excel(dir_db+file).iloc[:,:4]
+                    if file.startswith('AREA'):
+                        db_area = pd.read_excel(dir_db+file).rename(columns={'KODE DAN NAMA RESTO':'Nama Cabang'})
+                    if file.startswith('DATABASE PAPERBOX'):
+                        db_pkg = pd.read_excel(dir_db+file).rename(columns={'RESTO':'Nama Cabang'})
+                        
+                data = pd.concat([df_4104b,df_4104d],ignore_index=True).rename(columns={'Nominal Kts Keluar':'NOMINAL BOM','Kts Keluar':'QTY BOM'}).groupby(['Nama Gudang','Nama Barang'])[['QTY BOM','NOMINAL BOM']].sum().reset_index()
+                data['Nama Cabang'] = data['Nama Gudang'].str[:5] + data['Nama Gudang'].str.extract(r'\(([^()]*)\)')[0].values
+                data = data.merge(df_4101.rename(columns={'Kuantitas':'QTY DEVIASI','Total Biaya':'NOMINAL DEVIASI'}), on=['Nama Cabang','Nama Barang'], how='outer')
+                data = data.merge(df_3224,on=['Nama Cabang','Nama Barang'], how='outer').merge(df_wst[df_wst['KETERANGAN']=='QTY WASTE'].rename(columns={'QTY':'QTY WASTE'}).drop(columns=['KETERANGAN']),on=['Nama Cabang','Nama Barang'], how='outer').merge(
+                    df_wst[df_wst['KETERANGAN']=='QTY SUSUT'].rename(columns={'QTY':'QTY SUSUT'}).drop(columns=['KETERANGAN']),on=['Nama Cabang','Nama Barang'], how='outer').merge(
+                            df_wst[df_wst['KETERANGAN']=='QTY TRIAL'].rename(columns={'QTY':'QTY TRIAL'}).drop(columns=['KETERANGAN']),on=['Nama Cabang','Nama Barang'], how='outer'
+                    ).merge(db, on=['Nama Barang'], how='left')
+                data.loc[:,['QTY BOM','QTY DEVIASI','QTY SUSUT','QTY TRIAL','QTY WASTE','NOMINAL BOM','NOMINAL DEVIASI']] = data[['QTY BOM','QTY DEVIASI','QTY SUSUT','QTY TRIAL','QTY WASTE','NOMINAL BOM','NOMINAL DEVIASI']].fillna(0)
+                data['Harga'] = abs(data['NOMINAL BOM']/data['QTY BOM']).fillna(0)
+                data['NOMINAL SUSUT'] = data['QTY SUSUT'] * data['Harga']
+                data['NOMINAL WASTE'] = data['QTY WASTE'] * data['Harga']
+                data['NOMINAL TRIAL'] = data['QTY TRIAL'] * data['Harga']
+                data['QTY LOSS SURPUS'] = data['QTY DEVIASI'] - data['QTY WASTE'] - data['QTY SUSUT'] - data['QTY TRIAL']
+                data['NOMINAL LOSS SURPUS'] = data['NOMINAL DEVIASI'] - data['NOMINAL WASTE'] - data['NOMINAL SUSUT'] - data['NOMINAL TRIAL']
+                data['QTY USAGE'] = ''
+                data['NOMINAL USAGE'] = ''
+                data.loc[data[data['STATUS']=='USAGE'].index,'QTY USAGE'] = data[data['STATUS']=='USAGE']['QTY DEVIASI']
+                data.loc[data[data['STATUS']=='USAGE'].index,'NOMINAL USAGE'] = data[data['STATUS']=='USAGE']['NOMINAL DEVIASI']
+                data['QTY USAGE'] = data['QTY USAGE'].replace('',0)
+                data['NOMINAL USAGE'] = data['NOMINAL USAGE'].replace('',0)
+                data.loc[data[data['STATUS']=='USAGE'].index,'QTY DEVIASI'] = 0
+                data.loc[data[data['STATUS']=='USAGE'].index,'NOMINAL DEVIASI'] = 0
+                data.loc[data[(data['Nama Barang']=='KABEL TIES - RESTO') & ~(data['QTY RI'].isna())].index,'QTY USAGE'] = - data[(data['Nama Barang']=='KABEL TIES - RESTO') & ~(data['QTY RI'].isna())]['QTY RI']
+                data.loc[data[(data['Nama Barang']=='KABEL TIES - RESTO') & ~(data['NOMINAL RI'].isna())].index,'NOMINAL USAGE'] = - data[(data['Nama Barang']=='KABEL TIES - RESTO') & ~(data['NOMINAL RI'].isna())]['NOMINAL RI']
+                data['QTY COM'] = 0
+                data['NOMINAL COM'] = 0
+                data['QTY COM'] = data['QTY BOM'] + data['QTY DEVIASI'] + data['QTY USAGE']
+                data['NOMINAL COM'] = data['NOMINAL BOM'] + data['NOMINAL DEVIASI'] + data['NOMINAL USAGE']
+                data = data.merge(omset, on='Nama Cabang', how='left').merge(nb[['Nama Barang','NOMINAL BIANG PER GRAM']], on='Nama Barang',how='left').rename(columns={'OMSET':'OMSET 1'})
+                data['QTY WASTE + SUSUT'] = data['QTY WASTE'] + data['QTY SUSUT']
+                data['% WASTE + SUSUT'] = data['QTY WASTE + SUSUT']/data['QTY BOM']
+                data['NOMINAL BUMBU'] = data['NOMINAL BIANG PER GRAM']*data['QTY BOM']
+                data['NOMINAL BOM2'] = data['NOMINAL BOM'] -data['NOMINAL BUMBU']
+                data = data[['Akun Penyesuaian Persediaan','STATUS','Nama Cabang','Nama Barang','SATUAN',
+                      'QTY BOM','QTY COM','QTY DEVIASI', 'QTY USAGE','QTY WASTE', 'QTY SUSUT','QTY TRIAL','QTY LOSS SURPUS',
+                      'NOMINAL BOM','NOMINAL COM','NOMINAL DEVIASI','NOMINAL USAGE', 'NOMINAL WASTE', 'NOMINAL SUSUT', 'NOMINAL TRIAL','NOMINAL LOSS SURPUS',
+                      'OMSET 1','Harga','QTY WASTE + SUSUT','% WASTE + SUSUT','NOMINAL BIANG PER GRAM','NOMINAL BUMBU','NOMINAL BOM2'
+                    ]].replace([np.inf, -np.inf, np.nan], 0).merge(db_area, on='Nama Cabang', how='left').merge(db_pkg.drop_duplicates(), on='Nama Cabang',how='left').fillna('').rename(
+                        columns={'Nama Cabang':'RESTO','Nama Barang':'NAMA BAHAN','SATUAN':'Satuan'})
+
+                st.download_button(
+                    label="Download Excel",
+                    data=to_excel(data),
+                    file_name=f'REKAP DATA BOM-DEVIASI_{get_current_time_gmt7()}.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                
+                    zip_ref.extractall(tmpdirname)

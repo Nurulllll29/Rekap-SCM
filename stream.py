@@ -57,7 +57,7 @@ if selected_option == 'PENYESUAIAN IA':
     st.write('Upload file format *zip')
 if selected_option == 'PROMIX':
     st.write('Upload file format *xlsx')
- if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
+if selected_option == 'WEBSMART (DINE IN/TAKEAWAY)':
     st.write('Upload file format *zip')   
      
 def download_file_from_github(url, save_path):
